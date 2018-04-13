@@ -1,4 +1,4 @@
-# Taskbot
+# J.A.R.V.I.S. Taskbot
 
 ## Começando a mexer no seu bot
 - Seguir o tutorial de criação de bots [BotFather](https://core.telegram.org/bots#6-botfather)
@@ -12,4 +12,3 @@
 ## Refatorando
 - As oportunidades de refatoração que a equipe encontrar, deve ser cadastrada
 em forma de issue no repositório do time
-
