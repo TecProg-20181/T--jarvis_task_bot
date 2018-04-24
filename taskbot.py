@@ -9,8 +9,9 @@ import sqlalchemy
 
 import db
 from db import Task
+import jarvistoken
+from jarvistoken import *
 
-TOKEN = ""
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 HELP = """
@@ -358,4 +359,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
