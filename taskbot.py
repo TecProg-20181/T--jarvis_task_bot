@@ -228,6 +228,7 @@ def handle_updates(updates):
             a = ''
 
             a += '\U0001F4CB Task List\n'
+            a += 'ID | STATUS | NAME | PRIORITY\n'
             query = db.session.query(Task).filter_by(parents='', chat=chat).order_by(Task.id)
             for task in query.all():
                 icon = '\U0001F195'
@@ -236,7 +237,7 @@ def handle_updates(updates):
                 elif task.status == 'DONE':
                     icon = '\U00002611'
 
-                a += '[[{}]] {} {}\n'.format(task.id, icon, task.name)
+                a += '[[{}]] |   {}   | {} | {}\n'.format(task.id, icon, task.name, task.priority)
                 a += deps_text(task, chat)
 
             send_message(a, chat)
@@ -269,6 +270,7 @@ def handle_updates(updates):
             else:
                 task_id = int(msg)
                 query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+                fTask = query.one()
                 try:
                     task = query.one()
                 except sqlalchemy.orm.exc.NoResultFound:
@@ -291,16 +293,25 @@ def handle_updates(updates):
                         else:
                             depid = int(depid)
                             query = db.session.query(Task).filter_by(id=depid, chat=chat)
-                            try:
-                                taskdep = query.one()
-                                taskdep.parents += str(task.id) + ','
-                            except sqlalchemy.orm.exc.NoResultFound:
-                                send_message("_404_ Task {} not found x.x".format(depid), chat)
-                                continue
+                            y = fTask.parents.split(',')[0]
 
-                            deplist = task.dependencies.split(',')
-                            if str(depid) not in deplist:
-                                task.dependencies += str(depid) + ','
+                            if y != '':
+                                y = int(y)
+                                if y == depid:
+                                    send_message("Invalid dependence", chat)
+                                else:
+                                    pass
+                            else:
+                                try:
+                                    taskdep = query.one()
+                                    taskdep.parents += str(task.id) + ','
+                                except sqlalchemy.orm.exc.NoResultFound:
+                                    send_message("_404_ Task {} not found x.x".format(depid), chat)
+                                    continue
+
+                                deplist = task.dependencies.split(',')
+                                if str(depid) not in deplist:
+                                    task.dependencies += str(depid) + ','
 
                 db.session.commit()
                 send_message("Task {} dependencies up to date".format(task_id), chat)
