@@ -298,7 +298,7 @@ def handle_updates(updates):
                             if y != '':
                                 y = int(y)
                                 if y == depid:
-                                    send_message("Invalid dependence", chat)
+                                    send_message("Invalid dependency", chat)
                                 else:
                                     pass
                             else:
