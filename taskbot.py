@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
+
 import json
 import requests
 import time
 import urllib
 
 import sqlalchemy
-import db
-from jarvistoken import *
-from db import Task
 
-TOKEN = os.environ['BOT_API_TOKEN']
+import db
+from db import Task
+import jarvistoken
+from jarvistoken import *
+
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 HELP = """
@@ -57,25 +59,6 @@ def get_last_update_id(updates):
 
     return max(update_ids)
 
-def change_icon(dep):
-    icon = '\U0001F195'
-    if dep.status == 'DOING':
-        icon = '\U000023FA'
-    elif dep.status == 'DONE':
-        icon = '\U00002611'
-
-def list_dependencies(line, dep, chat, icon, i):
-    icon = change_icon(dep)
-
-    if i + 1 == len(task.dependencies.split(',')[:-1]):
-        line += '└── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
-        line += deps_text(dep, chat, preceed + '    ')
-    else:
-        line += '├── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
-        line += deps_text(dep, chat, preceed + '│   ')
-
-
-    return line
 def deps_text(task, chat, preceed=''):
     text = ''
 
@@ -84,8 +67,21 @@ def deps_text(task, chat, preceed=''):
         query = db.session.query(Task).filter_by(id=int(task.dependencies.split(',')[:-1][i]), chat=chat)
         dep = query.one()
 
-        icon = change_icon(dep)
-        text += list_dependencies(line, dep, chat, icon, i)
+        icon = '\U0001F195'
+        if dep.status == 'DOING':
+            icon = '\U000023FA'
+        elif dep.status == 'DONE':
+            icon = '\U00002611'
+
+        if i + 1 == len(task.dependencies.split(',')[:-1]):
+            line += '└── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
+            line += deps_text(dep, chat, preceed + '    ')
+        else:
+            line += '├── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
+            line += deps_text(dep, chat, preceed + '│   ')
+
+        text += line
+
     return text
 
 
