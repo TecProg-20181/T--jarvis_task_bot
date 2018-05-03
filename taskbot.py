@@ -219,6 +219,13 @@ def list_tasks(chat):
 
     send_message(message, chat)
 
+def convert_to_integer(value):
+    for i in range(len(value)):
+        if value[i] == '':
+            value[i] = 0
+        else:
+            value[i] = int(value[i])
+
 def task_dependencies(msg, chat):
     text = ''
     if msg != '':
@@ -254,14 +261,18 @@ def task_dependencies(msg, chat):
                 else:
                     depid = int(depid)
                     query = db.session.query(Task).filter_by(id=depid, chat=chat)
-                    y = fTask.parents.split(',')[0]
 
-                    if y != '':
-                        y = int(y)
-                        if y == depid:
-                            send_message("Invalid dependency", chat)
-                        else:
-                            pass
+                    firstTaskParent = fTask.parents.split(',')[0]
+                    listOfParents = fTask.parents.split(',')
+
+                    convert_to_integer(listOfParents)
+
+                    if firstTaskParent != '':
+                        for i in range(len(listOfParents)):
+                            if listOfParents[i] == depid:
+                                send_message("Invalid dependency", chat)
+                            else:
+                                pass
                     else:
                         try:
                             taskdep = query.one()
