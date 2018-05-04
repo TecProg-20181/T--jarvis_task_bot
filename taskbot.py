@@ -12,7 +12,7 @@ from db import Task
 import jarvistoken
 from jarvistoken import *
 
-URL = "https://api.telegram.org/bot{}/".format(TOKEN)
+URL = "https://api.telegram.org/bot{}/".format(get_token())
 
 HELP = """
  /new NOME
