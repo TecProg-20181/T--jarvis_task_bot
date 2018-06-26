@@ -4,6 +4,7 @@ import json
 import requests
 import time
 import urllib
+from datetime import datetime
 
 import sqlalchemy
 
@@ -25,6 +26,7 @@ HELP = """
  /dependson ID ID...
  /duplicate ID
  /priority ID PRIORITY{low, medium, high}
+ /duedate ID DATE
  /help
 """
 
@@ -83,10 +85,17 @@ def deps_text(task, chat, preceed=''):
             icon = '\U00002611'
 
         if i + 1 == len(task.dependencies.split(',')[:-1]):
-            line += '└── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
+            if dep.duedate == None:
+                line += '└── [[{}]] {} | {} | {} | {}\n'.format(dep.id, icon, dep.name, dep.priority, dep.duedate)
+            else:
+                line += '└── [[{}]] {} | {} | {} | {}\n'.format(dep.id, icon, dep.name, dep.priority, dep.duedate.strftime("%d/%m/%Y"))
+
             line += deps_text(dep, chat, preceed + '    ')
         else:
-            line += '├── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
+            if dep.duedate == None:
+                line += '├── [[{}]] {} | {} | {} | {}\n'.format(dep.id, icon, dep.name, dep.priority, dep.duedate)
+            else:
+                line += '├── [[{}]] {} | {} | {} | {}\n'.format(dep.id, icon, dep.name, dep.priority, dep.duedate.strftime("%d/%m/%Y"))
             line += deps_text(dep, chat, preceed + '│   ')
 
         text += line
@@ -188,7 +197,7 @@ def list_tasks(chat):
     message = ''
 
     message += '\U0001F4CB Task List\n'
-    message += 'ID | STATUS | NAME | PRIORITY\n'
+    message += 'ID | STATUS | NAME | PRIORITY | DUEDATE\n'
     query = db.session.query(Task).filter_by(parents='', chat=chat).order_by(Task.id)
     for task in query.all():
         icon = '\U0001F195'
@@ -197,7 +206,10 @@ def list_tasks(chat):
         elif task.status == 'DONE':
             icon = '\U00002611'
 
-        message += '[[{}]] |   {}   | {} | {}\n'.format(task.id, icon, task.name, task.priority)
+        if task.duedate == None:
+            message += '[[{}]] |   {}   | {} | {}\n'.format(task.id, icon, task.name, task.priority)
+        else:
+            message += '[[{}]] |   {}   | {} | {} | {}\n'.format(task.id, icon, task.name, task.priority, task.duedate.strftime("%d/%m/%Y"))
         message += deps_text(task, chat)
 
     send_message(message, chat)
@@ -317,6 +329,36 @@ def task_priority(msg, chat):
                 send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
         db.session.commit()
 
+def task_duedate(msg, chat):
+    text = ''
+    if msg != '':
+        if len(msg.split(' ', 1)) > 1:
+            text = msg.split(' ', 1)[1]
+        msg = msg.split(' ', 1)[0]
+
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+        if text == '':
+            task.duedate = None
+            send_message("_Cleared_ the duedate from task {}".format(task_id), chat)
+        else:
+            try:
+                task.duedate = datetime.strptime(text, '%d/%m/%Y' )
+                send_message("*Task {}*  has duedate *{}*".format(task_id, text), chat)
+            except ValueError:
+                send_message("The duedate *must be* in the following format: *'day-month-year'*", chat)
+                return
+        db.session.commit()
+
 def handle_updates(updates):
     for update in updates["result"]:
 
@@ -359,7 +401,8 @@ def handle_updates(updates):
             task_dependencies(msg, chat)
         elif command == '/priority':
             task_priority(msg, chat)
-
+        elif command == '/duedate':
+            task_duedate(msg, chat)
         elif command == '/start':
             send_message("Welcome! Here is a list of things you can do.", chat)
             send_message(HELP, chat)
