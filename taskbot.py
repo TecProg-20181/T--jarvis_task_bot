@@ -5,6 +5,7 @@ import requests
 import time
 import urllib
 from datetime import datetime
+from git_api import make_github_issue
 
 import sqlalchemy
 
@@ -27,6 +28,7 @@ HELP = """
  /duplicate ID
  /priority ID PRIORITY{low, medium, high}
  /duedate ID DATE
+ /create_issue ID
  /help
 """
 
@@ -329,6 +331,14 @@ def task_priority(msg, chat):
                 send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
         db.session.commit()
 
+def create_issue(chat_id, msg):
+    task_id = int(msg)
+    task = db.search_Task(task_id, chat_id)
+    if make_github_issue(task.name, [task.status, 'create_by_bot']):
+        send_message("Issue created!", chat_id)
+    else:
+        send_message("Issue did not create", chat_id)
+
 def task_duedate(msg, chat):
     text = ''
     if msg != '':
@@ -396,6 +406,9 @@ def handle_updates(updates):
 
         elif command == '/list':
             list_tasks(chat)
+
+        elif command == '/create_issue':
+             create_issue(chat, msg)
 
         elif command == '/dependson':
             task_dependencies(msg, chat)
