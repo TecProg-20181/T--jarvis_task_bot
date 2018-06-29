@@ -179,19 +179,22 @@ def delete_task(msg, chat):
         send_message("Task [[{}]] deleted".format(task_id), chat)
 
 def task_status(msg, chat, status):
-    if not msg.isdigit():
-        send_message("You must inform the task id", chat)
-    else:
-        task_id = int(msg)
-        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-        try:
-            task = query.one()
-        except sqlalchemy.orm.exc.NoResultFound:
-            send_message("_404_ Task {} not found x.x".format(task_id), chat)
-            return
-        task.status = status
-        db.session.commit()
-        send_message("*{}* task [[{}]] {}".format(task.status,task.id, task.name), chat)
+
+    id_list = msg.split(" ")
+    for id in id_list:
+        if not id.isdigit():
+            send_message("You must inform the task id", chat)
+        else:
+            task_id = int(id)
+            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+            try:
+                task = query.one()
+            except sqlalchemy.orm.exc.NoResultFound:
+                send_message("_404_ Task {} not found x.x".format(task_id), chat)
+                return
+            task.status = status
+            db.session.commit()
+            send_message("*{}* task [[{}]] {}".format(task.status, task.id, task.name), chat)
 
 def list_tasks(chat):
     message = ''
@@ -358,6 +361,9 @@ def task_duedate(msg, chat):
                 send_message("The duedate *must be* in the following format: *'day-month-year'*", chat)
                 return
         db.session.commit()
+
+
+
 
 def handle_updates(updates):
     for update in updates["result"]:
