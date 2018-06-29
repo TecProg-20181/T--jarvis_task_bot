@@ -5,16 +5,16 @@ import requests
 import time
 import urllib
 from datetime import datetime
-from git_api import make_github_issue
 
 import sqlalchemy
 
 import db
 from db import Task
-import jarvistoken
 from jarvistoken import *
 
 URL = "https://api.telegram.org/bot{}/".format(get_token())
+REPO_OWNER = 'TecProg-20181'
+REPO_NAME = 'T--jarvis_task_bot'
 
 HELP = """
  /new NOME
@@ -111,6 +111,25 @@ def create_task(msg, chat):
     db.session.commit()
     send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
     return task
+
+def make_github_issue(title, chat):
+    '''Create an issue on github.com using the given parameters.'''
+    # Our url to create issues via POST
+    url = 'https://api.github.com/repos/%s/%s/issues' % (REPO_OWNER, REPO_NAME)
+    # authenticated session to create the issue
+    session = requests.session()
+    session.auth = (get_user(), get_password())
+    # Create our issue
+    issue = {'title': title}
+    # Add the issue to our repository
+    r = session.post(url, json.dumps(issue))
+    if r.status_code == 201:
+        send_message('Successfully created Issue', chat)
+        return True
+    else:
+        send_message('Could''t create Issue', chat)
+        print ('Response:', r.content)
+        return False
 
 def duplicate_task(msg, chat):
     if not msg.isdigit():
@@ -331,14 +350,6 @@ def task_priority(msg, chat):
                 send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
         db.session.commit()
 
-def create_issue(chat_id, msg):
-    task_id = int(msg)
-    task = db.search_Task(task_id, chat_id)
-    if make_github_issue(task.name, [task.status, 'create_by_bot']):
-        send_message("Issue created!", chat_id)
-    else:
-        send_message("Issue did not create", chat_id)
-
 def task_duedate(msg, chat):
     text = ''
     if msg != '':
@@ -384,6 +395,7 @@ def handle_updates(updates):
         print(command, msg, chat)
 
         if command == '/new':
+            make_github_issue(msg, chat)
             create_task(msg, chat)
 
         elif command == '/rename':
@@ -408,7 +420,7 @@ def handle_updates(updates):
             list_tasks(chat)
 
         elif command == '/create_issue':
-             create_issue(chat, msg)
+             make_github_issue(msg, chat)
 
         elif command == '/dependson':
             task_dependencies(msg, chat)
