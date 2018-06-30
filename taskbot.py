@@ -11,6 +11,7 @@ import sqlalchemy
 import db
 from db import Task
 from jarvistoken import *
+from contracts import contract
 
 URL = "https://api.telegram.org/bot{}/".format(get_token())
 REPO_OWNER = 'TecProg-20181'
@@ -32,11 +33,14 @@ HELP = """
  /help
 """
 
+
+@contract(url='str')
 def get_url(url):
     response = requests.get(url)
     content = response.content.decode("utf8")
     return content
 
+@contract(url='str')
 def get_json_from_url(url):
     content = get_url(url)
     js = json.loads(content)
@@ -49,6 +53,7 @@ def get_updates(offset=None):
     js = get_json_from_url(url)
     return js
 
+@contract(text='str', chat_id='int')
 def send_message(text, chat_id, reply_markup=None):
     text = urllib.parse.quote_plus(text)
     url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown".format(text, chat_id)
@@ -56,6 +61,7 @@ def send_message(text, chat_id, reply_markup=None):
         url += "&reply_markup={}".format(reply_markup)
     get_url(url)
 
+@contract(update='list')
 def get_last_update_id(updates):
     update_ids = []
     for update in updates["result"]:
@@ -63,6 +69,7 @@ def get_last_update_id(updates):
 
     return max(update_ids)
 
+@contract(update='list')
 def get_message(update):
     if 'message' in update:
         message = update['message']
@@ -72,6 +79,7 @@ def get_message(update):
         print('Can\'t process! {}'.format(update))
     return message
 
+@contract(chat='str')
 def deps_text(task, chat, preceed=''):
     text = ''
 
@@ -104,6 +112,8 @@ def deps_text(task, chat, preceed=''):
 
     return text
 
+
+@contract(msg='str', chat='str')
 def create_task(msg, chat):
 
     task = Task(chat=chat, name=msg, status='TODO', dependencies='', parents='', priority='')
@@ -112,6 +122,7 @@ def create_task(msg, chat):
     send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
     return task
 
+@contract(title='str', chat='str')
 def make_github_issue(title, chat):
     '''Create an issue on github.com using the given parameters.'''
     # Our url to create issues via POST
@@ -131,6 +142,7 @@ def make_github_issue(title, chat):
         print ('Response:', r.content)
         return False
 
+@contract(msg='str', chat='str')
 def duplicate_task(msg, chat):
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
@@ -153,6 +165,7 @@ def duplicate_task(msg, chat):
         db.session.commit()
         send_message("New task *TODO* [[{}]] {}".format(dtask.id, dtask.name), chat)
 
+@contract(msg='str', chat='str')
 def rename_task(msg, chat):
     text = ''
     if msg != '':
@@ -180,6 +193,7 @@ def rename_task(msg, chat):
         db.session.commit()
         send_message("Task {} redefined from {} to {}".format(task_id, old_text, text), chat)
 
+@contract(msg='str', chat='str')
 def delete_task(msg, chat):
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
@@ -199,6 +213,7 @@ def delete_task(msg, chat):
         db.session.commit()
         send_message("Task [[{}]] deleted".format(task_id), chat)
 
+@contract(msg='str', chat='str', status='str')
 def task_status(msg, chat, status):
 
     id_list = msg.split(" ")
@@ -217,6 +232,7 @@ def task_status(msg, chat, status):
             db.session.commit()
             send_message("*{}* task [[{}]] {}".format(task.status, task.id, task.name), chat)
 
+@contract(chat='str')
 def list_tasks(chat):
     message = ''
 
@@ -255,6 +271,7 @@ def list_tasks(chat):
 
     send_message(message, chat)
 
+@contract(value='str')
 def convert_to_integer(value):
     for i in range(len(value)):
         if value[i] == '':
@@ -262,6 +279,7 @@ def convert_to_integer(value):
         else:
             value[i] = int(value[i])
 
+@contract(msg='str', chat='str')
 def task_dependencies(msg, chat):
     text = ''
     if msg != '':
@@ -324,6 +342,8 @@ def task_dependencies(msg, chat):
         db.session.commit()
         send_message("Task {} dependencies up to date".format(task_id), chat)
 
+
+@contract(msg='str', chat='str')
 def task_priority(msg, chat):
     text = ''
     if msg != '':
@@ -353,6 +373,7 @@ def task_priority(msg, chat):
                 send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
         db.session.commit()
 
+@contract(msg='str', chat='str')
 def task_duedate(msg, chat):
     text = ''
     if msg != '':
@@ -382,8 +403,6 @@ def task_duedate(msg, chat):
                 send_message("The duedate *must be* in the following format: *'day/month/year'*", chat)
                 return
         db.session.commit()
-
-
 
 
 def handle_updates(updates):
